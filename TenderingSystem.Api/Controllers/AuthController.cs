@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TenderingSystem.Application.Interfaces.Services;
-using TenderingSystem.Application.Models.Auth;
+using TenderingSystem.Shared.Models.Auth;
 
 namespace TenderingSystem.Api.Controllers;
 

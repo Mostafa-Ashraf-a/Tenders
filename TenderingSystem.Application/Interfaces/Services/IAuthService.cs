@@ -1,4 +1,4 @@
-using TenderingSystem.Application.Models.Auth;
+using TenderingSystem.Shared.Models.Auth;
 
 namespace TenderingSystem.Application.Interfaces.Services;
 

@@ -26,7 +26,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        services.Configure<TenderingSystem.Application.Models.Auth.JwtSettings>(
+        services.Configure<TenderingSystem.Shared.Models.Auth.JwtSettings>(
             configuration.GetSection("JwtSettings"));
 
         services.AddScoped<TenderingSystem.Application.Interfaces.Services.IAuthService, TenderingSystem.Infrastructure.Identity.AuthService>();

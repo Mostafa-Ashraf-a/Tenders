@@ -1,4 +1,4 @@
-namespace TenderingSystem.Application.Models.Auth;
+namespace TenderingSystem.Shared.Models.Auth;
 
 public class AuthResponse
 {
