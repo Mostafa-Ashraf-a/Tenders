@@ -1,0 +1,80 @@
+@page "/register"
+@using TenderingSystem.Shared.Models.Auth
+@using TenderingSystem.BlazorClient.Services
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>إنشاء حساب جديد</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-6">إنشاء حساب</MudText>
+
+        <EditForm Model="@_registerRequest" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_registerRequest.FirstName" Label="الاسم الأول" Variant="Variant.Outlined" Class="mb-4" />
+                    <ValidationMessage For="@(() => _registerRequest.FirstName)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_registerRequest.LastName" Label="اسم العائلة" Variant="Variant.Outlined" Class="mb-4" />
+                    <ValidationMessage For="@(() => _registerRequest.LastName)" />
+                </MudItem>
+            </MudGrid>
+
+            <MudTextField @bind-Value="_registerRequest.Email" Label="البريد الإلكتروني" Variant="Variant.Outlined" Class="mb-4" />
+            <ValidationMessage For="@(() => _registerRequest.Email)" />
+
+            <MudTextField @bind-Value="_registerRequest.Password" Label="كلمة المرور (6 أحرف على الأقل)" InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-4" />
+            <ValidationMessage For="@(() => _registerRequest.Password)" />
+
+            <MudSelect @bind-Value="_registerRequest.Role" Label="نوع الحساب" Variant="Variant.Outlined" Class="mb-6">
+                <MudSelectItem Value="@("Supplier")">مورّد (Supplier)</MudSelectItem>
+                <MudSelectItem Value="@("ProcurementManager")">مدير مشتريات</MudSelectItem>
+            </MudSelect>
+
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">جاري الإنشاء...</MudText>
+                }
+                else
+                {
+                    <MudText>إنشاء حساب</MudText>
+                }
+            </MudButton>
+        </EditForm>
+
+        <MudText Align="Align.Center" Class="mt-6">
+            لديك حساب بالفعل؟ <MudLink Href="/login">تسجيل الدخول</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private RegisterRequest _registerRequest = new() { Role = "Supplier" };
+    private bool _isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        _isLoading = true;
+        try
+        {
+            await AuthService.RegisterAsync(_registerRequest);
+            Snackbar.Add("تم إنشاء الحساب وتسجيل الدخول بنجاح!", Severity.Success);
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
