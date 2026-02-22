@@ -1,7 +1,69 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
 
-<PageTitle>Home</PageTitle>
+<PageTitle>نظام إدارة المناقصات الذكي</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h3" Align="Align.Center" Color="Color.Primary" Class="mb-4">مرحباً بك في نظام إدارة المناقصات الذكي</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-12">المنصة الأسرع للعثور على المناقصات وإدارتها باستخدام الذكاء الاصطناعي</MudText>
 
-Welcome to your new app.
+    <AuthorizeView>
+        <Authorized>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3" Class="pa-4">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">المناقصات الحالية</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText>تصفح المناقصات المتاحة والمفتوحة للمشاركة.</MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/tenders">عرض المناقصات</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3" Class="pa-4">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Secondary" Size="Size.Large" />
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">البحث الذكي</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText>اعتمد على الذكاء الاصطناعي لإيجاد الموردين الأكفأ.</MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/ai-search-logs">إدارة البحث الذكي</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+
+            </MudGrid>
+        </Authorized>
+        <NotAuthorized>
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" sm="8" md="6" Class="text-center">
+                    <MudPaper Elevation="2" Class="pa-8 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" Class="mb-4" />
+                        <MudText Typo="Typo.h5" Class="mb-4">يرجى تسجيل الدخول</MudText>
+                        <MudText Class="mb-6">للوصول إلى لوحة التحكم واستعراض المناقصات المتاحة.</MudText>
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="mx-2" Href="/login">تسجيل الدخول</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Large" Class="mx-2" Href="/register">إنشاء حساب</MudButton>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudContainer>
