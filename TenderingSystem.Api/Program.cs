@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using TenderingSystem.Infrastructure;
 using TenderingSystem.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using TenderingSystem.Infrastructure.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,6 +101,9 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    var context = scope.ServiceProvider.GetRequiredService<TenderingSystem.Infrastructure.Data.ApplicationDbContext>();
+    await context.Database.MigrateAsync();
+
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await IdentitySeeder.SeedDefaultUserAsync(userManager, roleManager);
