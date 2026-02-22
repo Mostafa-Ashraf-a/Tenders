@@ -1,0 +1,94 @@
+@page "/my-bids"
+@using TenderingSystem.Shared.Models.Bids
+@using TenderingSystem.BlazorClient.Services
+@inject BidService BidService
+@inject ISnackbar Snackbar
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Supplier")]
+
+<PageTitle>عروضي الفنية والمالية</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">💼 عروضي</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_bids.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">لم تقم بتقديم أي عروض حتى الآن.</MudAlert>
+}
+else
+{
+    <MudTable Items="@_bids" Hover="true" Striped="true" Bordered="true" Elevation="2">
+        <HeaderContent>
+            <MudTh>رقم المناقصة</MudTh>
+            <MudTh>عنوان المناقصة</MudTh>
+            <MudTh>تاريخ التقديم</MudTh>
+            <MudTh>السعر المقدم</MudTh>
+            <MudTh>العرض الفني</MudTh>
+            <MudTh>حالة العرض</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="رقم المناقصة">@context.TenderId.ToString().Substring(0, 8)</MudTd>
+            <MudTd DataLabel="عنوان المناقصة">
+                <MudLink Href="@($"/tenders/{context.TenderId}")">@context.TenderTitle</MudLink>
+            </MudTd>
+            <MudTd DataLabel="تاريخ التقديم">@context.SubmissionDate.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd DataLabel="السعر المقدم">@context.SubmittedPrice.ToString("C")</MudTd>
+            <MudTd DataLabel="العرض الفني">
+                <MudLink Href="@context.TechnicalProposalUrl" Target="_blank" Color="Color.Info">
+                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" /> عرض
+                </MudLink>
+            </MudTd>
+            <MudTd DataLabel="حالة العرض">
+                <MudChip T="string" Color="@GetStatusColor(context.Status)">@GetStatusText(context.Status)</MudChip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<BidDto> _bids = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBids();
+    }
+
+    private async Task LoadBids()
+    {
+        _loading = true;
+        try
+        {
+            _bids = await BidService.GetMyBidsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ في تحميل العروض: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Submitted" => Color.Warning,
+        "Accepted" => Color.Success,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Submitted" => "قيد الدراسة",
+        "Accepted" => "مقبول",
+        "Rejected" => "مرفوض",
+        _ => status
+    };
+}

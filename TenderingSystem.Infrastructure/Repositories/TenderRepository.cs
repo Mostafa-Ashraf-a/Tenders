@@ -15,7 +15,22 @@ public class TenderRepository : GenericRepository<Tender>, ITenderRepository
     public async Task<IReadOnlyList<Tender>> GetActiveTendersAsync()
     {
         return await _dbContext.Tenders
+            .Include(t => t.Category)
             .Where(t => t.Status == TenderStatus.Published)
             .ToListAsync();
+    }
+
+    public new async Task<IReadOnlyList<Tender>> GetAllAsync()
+    {
+        return await _dbContext.Tenders
+            .Include(t => t.Category)
+            .ToListAsync();
+    }
+
+    public new async Task<Tender?> GetByIdAsync(Guid id)
+    {
+        return await _dbContext.Tenders
+            .Include(t => t.Category)
+            .FirstOrDefaultAsync(t => t.Id == id);
     }
 }

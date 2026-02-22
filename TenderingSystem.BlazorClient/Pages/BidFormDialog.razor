@@ -1,0 +1,80 @@
+@using TenderingSystem.Shared.Models.Bids
+@using TenderingSystem.BlazorClient.Services
+@inject BidService BidService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.SubmittedPrice" Label="السعر المقدم (بالدولار أو العملة المحلية)"
+                                  Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                  Required="true" HelperText="يجب أن يكون أكبر من الصفر" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.TechnicalProposalUrl" Label="رابط العرض الفني (Google Drive, Dropbox, etc.)"
+                                  Variant="Variant.Outlined" Required="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Link"
+                                  Placeholder="https://..." HelperText="يرجى توفير رابط يمكن الوصول إليه يحتوي على التفاصيل الفنية والشهادات" />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">إلغاء</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleSubmit" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            تأكيد التقديم
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public Guid TenderId { get; set; }
+
+    private bool _saving = false;
+    private CreateBidDto _model = new();
+
+    protected override void OnInitialized()
+    {
+        _model.TenderId = TenderId;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_model.SubmittedPrice <= 0)
+        {
+            Snackbar.Add("يجب إدخال سعر صالح", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.TechnicalProposalUrl))
+        {
+            Snackbar.Add("يجب إدخال رابط العرض الفني", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            await BidService.SubmitBidAsync(_model);
+            Snackbar.Add("تم تسليم العرض بنجاح", Severity.Success);
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"حدث خطأ أثناء تقديم العرض: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

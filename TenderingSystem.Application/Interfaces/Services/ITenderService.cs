@@ -10,4 +10,5 @@ public interface ITenderService
     Task<TenderDto> CreateTenderAsync(CreateTenderDto dto);
     Task<TenderDto?> UpdateTenderAsync(Guid id, UpdateTenderDto dto);
     Task<bool> DeleteTenderAsync(Guid id);
+    Task<bool> PublishTenderAsync(Guid id);
 }

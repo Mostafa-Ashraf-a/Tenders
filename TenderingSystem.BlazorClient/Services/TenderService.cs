@@ -42,4 +42,10 @@ public class TenderService
         var response = await _httpClient.DeleteAsync($"api/tenders/{id}");
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<bool> PublishTenderAsync(Guid id)
+    {
+        var response = await _httpClient.PostAsync($"api/tenders/{id}/publish", null);
+        return response.IsSuccessStatusCode;
+    }
 }

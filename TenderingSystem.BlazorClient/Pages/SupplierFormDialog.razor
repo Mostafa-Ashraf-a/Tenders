@@ -1,0 +1,141 @@
+@using TenderingSystem.Shared.Models.Suppliers
+@using TenderingSystem.BlazorClient.Services
+@using TenderingSystem.Shared.Models.Categories
+@inject SupplierService SupplierService
+@inject CategoryService CategoryService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.CompanyName" Label="اسم الشركة"
+                              Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.Email" Label="البريد الإلكتروني"
+                              Variant="Variant.Outlined" Required="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.PhoneNumber" Label="رقم الهاتف"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.WebsiteUrl" Label="الموقع الإلكتروني"
+                              Variant="Variant.Outlined" Placeholder="https://example.com" />
+            </MudItem>
+            <MudItem xs="12" md="12">
+                <MudSelect T="Guid" Label="فئات الاهتمام" MultiSelection="true" @bind-SelectedValues="_selectedCategories" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var category in _categories)
+                    {
+                        <MudSelectItem T="Guid" Value="@category.Id">@category.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            @if (IsEdit)
+            {
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="_statusValue" Label="الحالة" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Registered")">مسجّل</MudSelectItem>
+                        <MudSelectItem Value="@("AiSuggested")">مقترح بالذكاء الاصطناعي</MudSelectItem>
+                        <MudSelectItem Value="@("Verified")">موثّق</MudSelectItem>
+                        <MudSelectItem Value="@("Blocked")">محظور</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.AiExtractedNotes" Label="ملاحظات الذكاء الاصطناعي"
+                                  Variant="Variant.Outlined" Lines="3" ReadOnly="true" />
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">إلغاء</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleSubmit" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(IsEdit ? "حفظ التعديلات" : "إضافة")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public SupplierDto? Supplier { get; set; }
+
+    private bool IsEdit => Supplier != null;
+    private bool _saving = false;
+    private string _statusValue = "Registered";
+    private IReadOnlyCollection<Guid> _selectedCategories = new HashSet<Guid>();
+    private List<CategoryDto> _categories = new();
+
+    private UpdateSupplierDto _model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetAllCategoriesAsync();
+
+        if (Supplier != null)
+        {
+            _model = new UpdateSupplierDto
+            {
+                Id = Supplier.Id,
+                CompanyName = Supplier.CompanyName,
+                Email = Supplier.Email,
+                PhoneNumber = Supplier.PhoneNumber,
+                WebsiteUrl = Supplier.WebsiteUrl,
+                Status = Supplier.Status,
+                AiExtractedNotes = Supplier.AiExtractedNotes,
+                CategoryIds = Supplier.CategoryIds
+            };
+            _statusValue = Supplier.Status;
+            
+            if (Supplier.CategoryIds != null && Supplier.CategoryIds.Any())
+            {
+                _selectedCategories = new HashSet<Guid>(Supplier.CategoryIds);
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+        try
+        {
+            if (IsEdit && Supplier != null)
+            {
+                _model.Status = _statusValue;
+                _model.CategoryIds = _selectedCategories.ToList();
+                await SupplierService.UpdateSupplierAsync(Supplier.Id, _model);
+                Snackbar.Add("تم تعديل المورد بنجاح", Severity.Success);
+            }
+            else
+            {
+                var createDto = new CreateSupplierDto
+                {
+                    CompanyName = _model.CompanyName,
+                    Email = _model.Email,
+                    PhoneNumber = _model.PhoneNumber,
+                    WebsiteUrl = _model.WebsiteUrl,
+                    CategoryIds = _selectedCategories.ToList()
+                };
+                await SupplierService.CreateSupplierAsync(createDto);
+                Snackbar.Add("تم إضافة المورد بنجاح", Severity.Success);
+            }
+
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

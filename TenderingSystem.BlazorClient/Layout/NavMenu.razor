@@ -1,10 +1,23 @@
 ﻿<MudNavMenu>
     <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">الرئيسية</MudNavLink>
-    
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <MudNavLink Href="/tenders" Icon="@Icons.Material.Filled.List">المناقصات (إدارة)</MudNavLink>
+            <MudNavLink Href="/categories" Icon="@Icons.Material.Filled.Label">الفئات</MudNavLink>
+            <MudNavLink Href="/suppliers" Icon="@Icons.Material.Filled.Business">الموردون</MudNavLink>
+            <MudNavLink Href="/ai-search-logs" Icon="@Icons.Material.Filled.Search">سجلات البحث الذكي</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Supplier">
+        <Authorized>
+            <MudNavLink Href="/tenders" Icon="@Icons.Material.Filled.List">المناقصات المتاحة</MudNavLink>
+            <MudNavLink Href="/my-bids" Icon="@Icons.Material.Filled.AttachMoney">عروضي</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
     <AuthorizeView>
         <Authorized>
-            <MudNavLink Href="/tenders" Icon="@Icons.Material.Filled.List">المناقصات</MudNavLink>
-            <MudNavLink Href="/ai-search-logs" Icon="@Icons.Material.Filled.Search">سجلات البحث الذكي</MudNavLink>
             <MudNavLink Href="/logout" Icon="@Icons.Material.Filled.Logout">تسجيل خروج</MudNavLink>
         </Authorized>
         <NotAuthorized>

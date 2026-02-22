@@ -1,0 +1,139 @@
+@page "/categories"
+@using TenderingSystem.Shared.Models.Categories
+@using TenderingSystem.BlazorClient.Services
+@inject CategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>إدارة الفئات</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">🏷️ إدارة الفئات</MudText>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            <MudTextField @bind-Value="_searchText" Label="بحث باسم الفئة"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12" md="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDialog" FullWidth="true">
+                إضافة فئة
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_categories.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">لا توجد فئات حالياً. اضغط على "إضافة فئة" لإنشاء فئة جديدة.</MudAlert>
+}
+else
+{
+    <MudTable Items="@FilteredCategories" Hover="true" Striped="true" Bordered="true" Elevation="2" Dense="false">
+        <HeaderContent>
+            <MudTh>الاسم</MudTh>
+            <MudTh>الوصف</MudTh>
+            <MudTh>الإجراءات</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="الاسم">@context.Name</MudTd>
+            <MudTd DataLabel="الوصف">@context.Description</MudTd>
+            <MudTd DataLabel="الإجراءات">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => AskDeleteConfirm(context))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<CategoryDto> _categories = new();
+    private bool _loading = true;
+    private string _searchText = string.Empty;
+
+    private IEnumerable<CategoryDto> FilteredCategories => _categories
+        .Where(c => string.IsNullOrEmpty(_searchText) ||
+                    c.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                    c.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        _loading = true;
+        try
+        {
+            _categories = await CategoryService.GetAllCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ في تحميل الفئات: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CategoryFormDialog>("إضافة فئة جديدة", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            await LoadCategories();
+    }
+
+    private async Task OpenEditDialog(CategoryDto category)
+    {
+        var parameters = new DialogParameters { ["Category"] = category };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CategoryFormDialog>("تعديل فئة", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            await LoadCategories();
+    }
+
+    private async Task AskDeleteConfirm(CategoryDto category)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", $"هل أنت متأكد من حذف الفئة '{category.Name}'؟");
+        parameters.Add("ButtonText", "حذف");
+        parameters.Add("Color", Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("تأكيد الحذف", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+        {
+            var success = await CategoryService.DeleteCategoryAsync(category.Id);
+            if (success)
+            {
+                Snackbar.Add("تم حذف الفئة بنجاح", Severity.Success);
+                await LoadCategories();
+            }
+            else
+            {
+                Snackbar.Add("فشل في حذف الفئة", Severity.Error);
+            }
+        }
+    }
+}

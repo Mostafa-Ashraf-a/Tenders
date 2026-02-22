@@ -1,0 +1,124 @@
+@page "/tenders/{TenderId:guid}/bids"
+@using TenderingSystem.Shared.Models.Bids
+@using TenderingSystem.BlazorClient.Services
+@inject BidService BidService
+@inject ISnackbar Snackbar
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+
+<PageTitle>إدارة عروض المناقصة</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">📋 عروض المناقصة</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_bids.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">لا توجد عروض مقدمة لهذه المناقصة حتى الآن.</MudAlert>
+}
+else
+{
+    <MudTable Items="@_bids" Hover="true" Striped="true" Bordered="true" Elevation="2">
+        <HeaderContent>
+            <MudTh>رقم العرض</MudTh>
+            <MudTh>المورد</MudTh>
+            <MudTh>تاريخ التقديم</MudTh>
+            <MudTh>السعر المقدم</MudTh>
+            <MudTh>العرض الفني</MudTh>
+            <MudTh>الحالة</MudTh>
+            <MudTh>الإجراءات</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="رقم العرض">@context.Id.ToString().Substring(0, 8)</MudTd>
+            <MudTd DataLabel="المورد">@context.SupplierName</MudTd>
+            <MudTd DataLabel="تاريخ التقديم">@context.SubmissionDate.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd DataLabel="السعر المقدم">@context.SubmittedPrice.ToString("C")</MudTd>
+            <MudTd DataLabel="العرض الفني">
+                <MudLink Href="@context.TechnicalProposalUrl" Target="_blank" Color="Color.Info">
+                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" /> عرض
+                </MudLink>
+            </MudTd>
+            <MudTd DataLabel="الحالة">
+                <MudChip T="string" Color="@GetStatusColor(context.Status)">@GetStatusText(context.Status)</MudChip>
+            </MudTd>
+            <MudTd DataLabel="الإجراءات">
+                @if (context.Status == "Submitted")
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" 
+                               OnClick="@(() => AwardBid(context.Id))" Disabled="_processingId == context.Id">
+                        @if (_processingId == context.Id)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        قبول العرض
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    [Parameter] public Guid TenderId { get; set; }
+    private List<BidDto> _bids = new();
+    private bool _loading = true;
+    private Guid? _processingId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBids();
+    }
+
+    private async Task LoadBids()
+    {
+        _loading = true;
+        try
+        {
+            _bids = await BidService.GetBidsForTenderAsync(TenderId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AwardBid(Guid bidId)
+    {
+        _processingId = bidId;
+        try
+        {
+            await BidService.AwardBidAsync(bidId);
+            Snackbar.Add("تم اختيار العرض بنجاح", Severity.Success);
+            await LoadBids(); // Refresh the list
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processingId = null;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Submitted" => Color.Warning,
+        "Accepted" => Color.Success,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Submitted" => "قيد الدراسة",
+        "Accepted" => "مقبول",
+        "Rejected" => "مرفوض",
+        _ => status
+    };
+}

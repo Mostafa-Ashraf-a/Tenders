@@ -40,6 +40,11 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthService, TenderingSystem.Infrastructure.Identity.AuthService>();
         services.AddScoped<ITenderService, TenderService>();
+        services.AddScoped<ISupplierService, SupplierService>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IBidService, BidService>();
 
         return services;
     }

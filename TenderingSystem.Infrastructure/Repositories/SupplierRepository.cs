@@ -13,6 +13,25 @@ public class SupplierRepository : GenericRepository<Supplier>, ISupplierReposito
 
     public async Task<Supplier?> GetByEmailAsync(string email)
     {
-        return await _dbContext.Suppliers.FirstOrDefaultAsync(s => s.Email == email);
+        return await _dbContext.Suppliers
+            .Include(s => s.SupplierCategories)
+            .ThenInclude(sc => sc.Category)
+            .FirstOrDefaultAsync(s => s.Email == email);
+    }
+
+    public new async Task<IReadOnlyList<Supplier>> GetAllAsync()
+    {
+        return await _dbContext.Suppliers
+            .Include(s => s.SupplierCategories)
+            .ThenInclude(sc => sc.Category)
+            .ToListAsync();
+    }
+
+    public new async Task<Supplier?> GetByIdAsync(Guid id)
+    {
+        return await _dbContext.Suppliers
+            .Include(s => s.SupplierCategories)
+            .ThenInclude(sc => sc.Category)
+            .FirstOrDefaultAsync(s => s.Id == id);
     }
 }

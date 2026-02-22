@@ -1,6 +1,8 @@
 @using TenderingSystem.Shared.Models.Tenders
 @using TenderingSystem.BlazorClient.Services
+@using TenderingSystem.Shared.Models.Categories
 @inject TenderService TenderService
+@inject CategoryService CategoryService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -17,8 +19,12 @@
                                   Variant="Variant.Outlined" Lines="4" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_model.Category" Label="الفئة"
-                                  Variant="Variant.Outlined" Required="true" />
+                    <MudSelect @bind-Value="_model.CategoryId" Label="الفئة" Variant="Variant.Outlined" Required="true" AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var category in _categories)
+                        {
+                            <MudSelectItem Value="(Guid?)category.Id">@category.Name</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
                 @if (IsEdit)
                 {
@@ -71,16 +77,19 @@
     private DateTime? _closingDate = DateTime.Today.AddDays(30);
 
     private CreateTenderDto _model = new();
+    private List<CategoryDto> _categories = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        _categories = await CategoryService.GetAllCategoriesAsync();
+
         if (Tender != null)
         {
             _model = new CreateTenderDto
             {
                 Title = Tender.Title,
                 Description = Tender.Description,
-                Category = Tender.Category,
+                CategoryId = Tender.CategoryId,
                 PublishDate = Tender.PublishDate,
                 ClosingDate = Tender.ClosingDate,
                 HasAiTargeting = Tender.HasAiTargeting
@@ -106,7 +115,7 @@
                     Id = Tender.Id,
                     Title = _model.Title,
                     Description = _model.Description,
-                    Category = _model.Category,
+                    CategoryId = _model.CategoryId,
                     PublishDate = _model.PublishDate,
                     ClosingDate = _model.ClosingDate,
                     Status = _statusValue,

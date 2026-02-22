@@ -5,6 +5,6 @@ public enum BidStatus
     Submitted,
     TechnicallyAccepted,
     TechnicallyRejected,
-    Won,
-    Lost
+    Accepted,
+    Rejected
 }

@@ -1,0 +1,96 @@
+@using TenderingSystem.Shared.Models.Categories
+@using TenderingSystem.BlazorClient.Services
+@inject CategoryService CategoryService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Name" Label="اسم الفئة"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="الوصف"
+                                  Variant="Variant.Outlined" Lines="3" />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">إلغاء</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleSubmit" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(IsEdit ? "حفظ التعديلات" : "إضافة")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public CategoryDto? Category { get; set; }
+
+    private bool IsEdit => Category != null;
+    private bool _saving = false;
+
+    private CreateCategoryDto _model = new();
+
+    protected override void OnInitialized()
+    {
+        if (Category != null)
+        {
+            _model = new CreateCategoryDto
+            {
+                Name = Category.Name,
+                Description = Category.Description
+            };
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            Snackbar.Add("يرجى إدخال اسم الفئة", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (IsEdit && Category != null)
+            {
+                var updateDto = new UpdateCategoryDto
+                {
+                    Id = Category.Id,
+                    Name = _model.Name,
+                    Description = _model.Description
+                };
+                await CategoryService.UpdateCategoryAsync(Category.Id, updateDto);
+                Snackbar.Add("تم تعديل الفئة بنجاح", Severity.Success);
+            }
+            else
+            {
+                await CategoryService.CreateCategoryAsync(_model);
+                Snackbar.Add("تم إضافة الفئة بنجاح", Severity.Success);
+            }
+
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

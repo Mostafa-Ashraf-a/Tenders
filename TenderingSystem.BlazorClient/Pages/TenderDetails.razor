@@ -2,6 +2,8 @@
 @using TenderingSystem.Shared.Models.Tenders
 @using TenderingSystem.BlazorClient.Services
 @inject TenderService TenderService
+@inject BidService BidService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
@@ -37,7 +39,7 @@ else
                 </MudItem>
                 <MudItem xs="12" md="4">
                     <MudText Typo="Typo.subtitle1" Color="Color.Secondary">الفئة</MudText>
-                    <MudText>@_tender.Category</MudText>
+                    <MudText>@_tender.CategoryName</MudText>
                 </MudItem>
                 <MudItem xs="12" md="4">
                     <MudText Typo="Typo.subtitle1" Color="Color.Secondary">تاريخ النشر</MudText>
@@ -58,15 +60,46 @@ else
                        OnClick="@(() => Navigation.NavigateTo("/tenders"))">
                 رجوع للقائمة
             </MudButton>
+            <MudSpacer />
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.People"
+                               OnClick="@(() => Navigation.NavigateTo($"/tenders/{Id}/bids"))">
+                        إدارة العروض
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Supplier">
+                <Authorized>
+                    @if (_tender.Status == "Published" && DateTime.UtcNow <= _tender.ClosingDate)
+                    {
+                        if (_hasBid)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" Disabled="true">
+                                تم العرض مسبقاً
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AttachMoney"
+                                       OnClick="OpenBidDialog">
+                                تقديم عرض
+                            </MudButton>
+                        }
+                    }
+                </Authorized>
+            </AuthorizeView>
         </MudCardActions>
     </MudCard>
 }
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private TenderDto? _tender;
     private bool _loading = true;
+    private bool _hasBid = false;
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
@@ -80,6 +113,12 @@ else
         try
         {
             _tender = await TenderService.GetTenderByIdAsync(Id);
+            
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.IsInRole("Supplier"))
+            {
+                _hasBid = await BidService.HasSupplierBidAsync(Id);
+            }
         }
         catch (Exception ex)
         {
@@ -112,4 +151,18 @@ else
         "Archived" => "مؤرشفة",
         _ => status
     };
+
+    private async Task OpenBidDialog()
+    {
+        var parameters = new DialogParameters { ["TenderId"] = _tender!.Id };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<BidFormDialog>("تقديم عرض فني ومالي", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result!.Canceled)
+        {
+            // Optionally redirect to My Bids page
+            Navigation.NavigateTo("/my-bids");
+        }
+    }
 }

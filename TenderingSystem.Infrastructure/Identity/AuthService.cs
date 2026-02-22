@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TenderingSystem.Application.Interfaces.Services;
+using TenderingSystem.Application.Interfaces.Repositories;
+using TenderingSystem.Domain.Entities;
+using TenderingSystem.Domain.Enums;
 using TenderingSystem.Shared.Models.Auth;
 
 namespace TenderingSystem.Infrastructure.Identity;
@@ -13,13 +16,19 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly JwtSettings _jwtSettings;
+    private readonly IOptions<JwtSettings> _jwtSettings;
+    private readonly ISupplierRepository _supplierRepository;
 
-    public AuthService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IOptions<JwtSettings> jwtSettings)
+    public AuthService(
+        UserManager<ApplicationUser> userManager, 
+        RoleManager<IdentityRole> roleManager, 
+        IOptions<JwtSettings> jwtSettings,
+        ISupplierRepository supplierRepository)
     {
         _userManager = userManager;
         _roleManager = roleManager;
-        _jwtSettings = jwtSettings.Value;
+        _jwtSettings = jwtSettings;
+        _supplierRepository = supplierRepository;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -69,6 +78,28 @@ public class AuthService : IAuthService
 
         await _userManager.AddToRoleAsync(user, request.Role);
 
+        if (request.Role == "Supplier")
+        {
+            var existingSupplier = await _supplierRepository.GetByEmailAsync(request.Email);
+            if (existingSupplier != null)
+            {
+                existingSupplier.UserId = user.Id;
+                existingSupplier.Status = SupplierStatus.Registered;
+                await _supplierRepository.UpdateAsync(existingSupplier);
+            }
+            else
+            {
+                var newSupplier = new Supplier
+                {
+                    CompanyName = $"{request.FirstName} {request.LastName}",
+                    Email = request.Email,
+                    UserId = user.Id,
+                    Status = SupplierStatus.Registered
+                };
+                await _supplierRepository.AddAsync(newSupplier);
+            }
+        }
+
         var roles = await _userManager.GetRolesAsync(user);
         var token = GenerateJwtToken(user, roles);
 
@@ -95,14 +126,14 @@ public class AuthService : IAuthService
             claims.Add(new Claim(ClaimTypes.Role, role));
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Value.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
+            issuer: _jwtSettings.Value.Issuer,
+            audience: _jwtSettings.Value.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_jwtSettings.Value.DurationInMinutes),
             signingCredentials: creds
         );
 

@@ -59,7 +59,7 @@ else
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="العنوان">@context.Title</MudTd>
-            <MudTd DataLabel="الفئة">@context.Category</MudTd>
+            <MudTd DataLabel="الفئة">@context.CategoryName</MudTd>
             <MudTd DataLabel="تاريخ النشر">@context.PublishDate.ToString("dd/MM/yyyy")</MudTd>
             <MudTd DataLabel="آخر موعد">@context.ClosingDate.ToString("dd/MM/yyyy")</MudTd>
             <MudTd DataLabel="الحالة">
@@ -68,6 +68,11 @@ else
                 </MudChip>
             </MudTd>
             <MudTd DataLabel="الإجراءات">
+                @if (context.Status == "Draft")
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Success" Size="Size.Small"
+                                   OnClick="@(() => PublishTender(context))" />
+                }
                 <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small"
                                OnClick="@(() => ViewDetails(context.Id))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small"
@@ -106,7 +111,7 @@ else
     private IEnumerable<TenderDto> FilteredTenders => _tenders
         .Where(t => (string.IsNullOrEmpty(_searchText) ||
                      t.Title.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
-                     t.Category.Contains(_searchText, StringComparison.OrdinalIgnoreCase)) &&
+                     t.CategoryName.Contains(_searchText, StringComparison.OrdinalIgnoreCase)) &&
                     (string.IsNullOrEmpty(_filterStatus) || t.Status == _filterStatus));
 
     protected override async Task OnInitializedAsync()
@@ -170,6 +175,33 @@ else
                      success ? Severity.Success : Severity.Error);
         if (success) await LoadTenders();
         _tenderToDelete = null;
+    }
+
+    private async Task PublishTender(TenderDto tender)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", $"هل أنت متأكد من نشر المناقصة '{tender.Title}'؟ سيتم إرسال إشعار للموردين.");
+        parameters.Add("ButtonText", "نشر");
+        parameters.Add("Color", Color.Success);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("تأكيد النشر", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+        {
+            var success = await TenderService.PublishTenderAsync(tender.Id);
+            if (success)
+            {
+                Snackbar.Add("تم نشر المناقصة وإرسال الإشعارات بنجاح", Severity.Success);
+                await LoadTenders();
+            }
+            else
+            {
+                Snackbar.Add("فشل في نشر المناقصة", Severity.Error);
+            }
+        }
     }
 
     private Color GetStatusColor(string status) => status switch

@@ -24,5 +24,8 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TenderService>();
+builder.Services.AddScoped<SupplierService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<BidService>();
 
 await builder.Build().RunAsync();

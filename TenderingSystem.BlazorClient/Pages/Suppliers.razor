@@ -1,0 +1,190 @@
+@page "/suppliers"
+@using TenderingSystem.Shared.Models.Suppliers
+@using TenderingSystem.BlazorClient.Services
+@inject SupplierService SupplierService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>الموردون</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">🏢 إدارة الموردين</MudText>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="_searchText" Label="بحث بالاسم أو البريد"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect @bind-Value="_filterStatus" Label="تصفية بالحالة" Variant="Variant.Outlined">
+                <MudSelectItem Value="@("")">الكل</MudSelectItem>
+                <MudSelectItem Value="@("Registered")">مسجّل</MudSelectItem>
+                <MudSelectItem Value="@("AiSuggested")">مقترح بالذكاء الاصطناعي</MudSelectItem>
+                <MudSelectItem Value="@("Verified")">موثّق</MudSelectItem>
+                <MudSelectItem Value="@("Blocked")">محظور</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDialog" FullWidth="true">
+                إضافة مورد
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_suppliers.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">لا يوجد موردون حالياً. اضغط على "إضافة مورد" لإضافة أول مورد.</MudAlert>
+}
+else
+{
+    <MudTable Items="@FilteredSuppliers" Hover="true" Striped="true" Bordered="true"
+              Elevation="2" Dense="false">
+        <HeaderContent>
+            <MudTh>اسم الشركة</MudTh>
+            <MudTh>الفئات</MudTh>
+            <MudTh>البريد الإلكتروني</MudTh>
+            <MudTh>رقم الهاتف</MudTh>
+            <MudTh>الموقع الإلكتروني</MudTh>
+            <MudTh>الحالة</MudTh>
+            <MudTh>الإجراءات</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="اسم الشركة">@context.CompanyName</MudTd>
+            <MudTd DataLabel="الفئات">
+                @if (context.CategoryNames != null && context.CategoryNames.Any())
+                {
+                    foreach (var cat in context.CategoryNames)
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mr-1">@cat</MudChip>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Surface">غير محدد</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="البريد الإلكتروني">@context.Email</MudTd>
+            <MudTd DataLabel="رقم الهاتف">@context.PhoneNumber</MudTd>
+            <MudTd DataLabel="الموقع الإلكتروني">
+                @if (!string.IsNullOrEmpty(context.WebsiteUrl))
+                {
+                    <MudLink Href="@context.WebsiteUrl" Target="_blank">@context.WebsiteUrl</MudLink>
+                }
+            </MudTd>
+            <MudTd DataLabel="الحالة">
+                <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                    @GetStatusText(context.Status)
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="الإجراءات">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => AskDeleteConfirm(context))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<SupplierDto> _suppliers = new();
+    private bool _loading = true;
+    private string _searchText = string.Empty;
+    private string _filterStatus = string.Empty;
+    private SupplierDto? _supplierToDelete;
+    private bool _showDeleteConfirm = false;
+
+    private IEnumerable<SupplierDto> FilteredSuppliers => _suppliers
+        .Where(s => (string.IsNullOrEmpty(_searchText) ||
+                     s.CompanyName.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                     s.Email.Contains(_searchText, StringComparison.OrdinalIgnoreCase)) &&
+                    (string.IsNullOrEmpty(_filterStatus) || s.Status == _filterStatus));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuppliers();
+    }
+
+    private async Task LoadSuppliers()
+    {
+        _loading = true;
+        try
+        {
+            _suppliers = await SupplierService.GetAllSuppliersAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ في تحميل الموردين: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<SupplierFormDialog>("إضافة مورد جديد", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadSuppliers();
+    }
+
+    private async Task OpenEditDialog(SupplierDto supplier)
+    {
+        var parameters = new DialogParameters { ["Supplier"] = supplier };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<SupplierFormDialog>("تعديل المورد", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadSuppliers();
+    }
+
+    private void AskDeleteConfirm(SupplierDto supplier)
+    {
+        _supplierToDelete = supplier;
+        _showDeleteConfirm = true;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        if (_supplierToDelete == null) return;
+
+        var success = await SupplierService.DeleteSupplierAsync(_supplierToDelete.Id);
+        Snackbar.Add(success ? "تم حذف المورد بنجاح" : "فشل في حذف المورد",
+                     success ? Severity.Success : Severity.Error);
+        if (success) await LoadSuppliers();
+        _supplierToDelete = null;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Registered" => Color.Info,
+        "AiSuggested" => Color.Secondary,
+        "Verified" => Color.Success,
+        "Blocked" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Registered" => "مسجّل",
+        "AiSuggested" => "مقترح AI",
+        "Verified" => "موثّق",
+        "Blocked" => "محظور",
+        _ => status
+    };
+}

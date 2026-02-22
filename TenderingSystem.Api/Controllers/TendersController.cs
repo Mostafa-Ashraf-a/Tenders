@@ -68,4 +68,13 @@ public class TendersController : ControllerBase
         if (!deleted) return NotFound();
         return NoContent();
     }
+
+    // POST: api/tenders/{id}/publish
+    [HttpPost("{id:guid}/publish")]
+    public async Task<IActionResult> Publish(Guid id)
+    {
+        var published = await _tenderService.PublishTenderAsync(id);
+        if (!published) return BadRequest("التأكد من أن المناقصة مسودة قبل نشرها");
+        return Ok();
+    }
 }

@@ -15,6 +15,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Bid> Bids => Set<Bid>();
     public DbSet<AiSearchLog> AiSearchLogs => Set<AiSearchLog>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<SupplierCategory> SupplierCategories => Set<SupplierCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +24,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // Configure relations and constraints
         
+        modelBuilder.Entity<SupplierCategory>()
+            .HasKey(sc => new { sc.SupplierId, sc.CategoryId });
+
+        modelBuilder.Entity<SupplierCategory>()
+            .HasOne(sc => sc.Supplier)
+            .WithMany(s => s.SupplierCategories)
+            .HasForeignKey(sc => sc.SupplierId);
+
+        modelBuilder.Entity<SupplierCategory>()
+            .HasOne(sc => sc.Category)
+            .WithMany(c => c.SupplierCategories)
+            .HasForeignKey(sc => sc.CategoryId);
+
+        modelBuilder.Entity<Tender>()
+            .HasOne(t => t.Category)
+            .WithMany(c => c.Tenders)
+            .HasForeignKey(t => t.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<Bid>()
             .HasOne(b => b.Tender)
             .WithMany(t => t.Bids)
@@ -39,6 +60,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(t => t.AiSearchLogs)
             .HasForeignKey(a => a.TenderId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Supplier>()
+            .HasOne<ApplicationUser>()
+            .WithOne()
+            .HasForeignKey<Supplier>(s => s.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Bid>()
             .Property(b => b.SubmittedPrice)
