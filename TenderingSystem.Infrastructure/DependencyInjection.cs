@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TenderingSystem.Application.Interfaces.Repositories;
+using TenderingSystem.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Identity;
 using TenderingSystem.Infrastructure.Data;
 using TenderingSystem.Infrastructure.Identity;
 using TenderingSystem.Infrastructure.Repositories;
+using TenderingSystem.Infrastructure.Services;
 
 namespace TenderingSystem.Infrastructure;
 
@@ -36,7 +38,8 @@ public static class DependencyInjection
         services.Configure<TenderingSystem.Shared.Models.Auth.JwtSettings>(
             configuration.GetSection("JwtSettings"));
 
-        services.AddScoped<TenderingSystem.Application.Interfaces.Services.IAuthService, TenderingSystem.Infrastructure.Identity.AuthService>();
+        services.AddScoped<IAuthService, TenderingSystem.Infrastructure.Identity.AuthService>();
+        services.AddScoped<ITenderService, TenderService>();
 
         return services;
     }

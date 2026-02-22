@@ -1,0 +1,137 @@
+@using TenderingSystem.Shared.Models.Tenders
+@using TenderingSystem.BlazorClient.Services
+@inject TenderService TenderService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Title" Label="عنوان المناقصة"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="الوصف"
+                                  Variant="Variant.Outlined" Lines="4" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.Category" Label="الفئة"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="_statusValue" Label="الحالة" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Draft")">مسودة</MudSelectItem>
+                            <MudSelectItem Value="@("Published")">منشورة</MudSelectItem>
+                            <MudSelectItem Value="@("UnderEvaluation")">تحت التقييم</MudSelectItem>
+                            <MudSelectItem Value="@("Awarded")">مُرسى</MudSelectItem>
+                            <MudSelectItem Value="@("Cancelled")">ملغاة</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                }
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="_publishDate" Label="تاريخ النشر"
+                                   Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="_closingDate" Label="آخر موعد"
+                                   Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="_model.HasAiTargeting" Color="Color.Primary"
+                               Label="تفعيل استهداف AI" />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">إلغاء</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="HandleSubmit" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(IsEdit ? "حفظ التعديلات" : "إضافة")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public TenderDto? Tender { get; set; }
+
+    private bool IsEdit => Tender != null;
+    private bool _saving = false;
+    private string _statusValue = "Draft";
+    private DateTime? _publishDate = DateTime.Today;
+    private DateTime? _closingDate = DateTime.Today.AddDays(30);
+
+    private CreateTenderDto _model = new();
+
+    protected override void OnInitialized()
+    {
+        if (Tender != null)
+        {
+            _model = new CreateTenderDto
+            {
+                Title = Tender.Title,
+                Description = Tender.Description,
+                Category = Tender.Category,
+                PublishDate = Tender.PublishDate,
+                ClosingDate = Tender.ClosingDate,
+                HasAiTargeting = Tender.HasAiTargeting
+            };
+            _statusValue = Tender.Status;
+            _publishDate = Tender.PublishDate;
+            _closingDate = Tender.ClosingDate;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+        try
+        {
+            _model.PublishDate = _publishDate ?? DateTime.Today;
+            _model.ClosingDate = _closingDate ?? DateTime.Today.AddDays(30);
+
+            if (IsEdit && Tender != null)
+            {
+                var updateDto = new UpdateTenderDto
+                {
+                    Id = Tender.Id,
+                    Title = _model.Title,
+                    Description = _model.Description,
+                    Category = _model.Category,
+                    PublishDate = _model.PublishDate,
+                    ClosingDate = _model.ClosingDate,
+                    Status = _statusValue,
+                    HasAiTargeting = _model.HasAiTargeting
+                };
+                await TenderService.UpdateTenderAsync(Tender.Id, updateDto);
+                Snackbar.Add("تم تعديل المناقصة بنجاح", Severity.Success);
+            }
+            else
+            {
+                await TenderService.CreateTenderAsync(_model);
+                Snackbar.Add("تم إضافة المناقصة بنجاح", Severity.Success);
+            }
+
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

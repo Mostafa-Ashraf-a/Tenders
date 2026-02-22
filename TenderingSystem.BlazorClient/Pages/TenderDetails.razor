@@ -1,0 +1,115 @@
+@page "/tenders/{Id:guid}"
+@using TenderingSystem.Shared.Models.Tenders
+@using TenderingSystem.BlazorClient.Services
+@inject TenderService TenderService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>تفاصيل المناقصة</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="mb-4" />
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_tender == null)
+{
+    <MudAlert Severity="Severity.Error">المناقصة غير موجودة.</MudAlert>
+}
+else
+{
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">@_tender.Title</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudChip T="string" Color="@GetStatusColor(_tender.Status)">@GetStatusText(_tender.Status)</MudChip>
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">الوصف</MudText>
+                    <MudText>@_tender.Description</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">الفئة</MudText>
+                    <MudText>@_tender.Category</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">تاريخ النشر</MudText>
+                    <MudText>@_tender.PublishDate.ToString("dd MMMM yyyy")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">آخر موعد للتقديم</MudText>
+                    <MudText>@_tender.ClosingDate.ToString("dd MMMM yyyy")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">استهداف AI</MudText>
+                    <MudText>@(_tender.HasAiTargeting ? "✅ مفعّل" : "❌ غير مفعّل")</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack"
+                       OnClick="@(() => Navigation.NavigateTo("/tenders"))">
+                رجوع للقائمة
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private TenderDto? _tender;
+    private bool _loading = true;
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("الرئيسية", href: "/"),
+        new BreadcrumbItem("المناقصات", href: "/tenders"),
+        new BreadcrumbItem("التفاصيل", href: null, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _tender = await TenderService.GetTenderByIdAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطأ: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Draft" => Color.Default,
+        "Published" => Color.Success,
+        "UnderEvaluation" => Color.Warning,
+        "Awarded" => Color.Primary,
+        "Cancelled" => Color.Error,
+        "Archived" => Color.Dark,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Draft" => "مسودة",
+        "Published" => "منشورة",
+        "UnderEvaluation" => "تحت التقييم",
+        "Awarded" => "مُرسى",
+        "Cancelled" => "ملغاة",
+        "Archived" => "مؤرشفة",
+        _ => status
+    };
+}
