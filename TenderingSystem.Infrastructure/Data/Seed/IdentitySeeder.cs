@@ -40,6 +40,11 @@ public static class IdentitySeeder
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
             }
+            else
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to seed default admin user: {errors}");
+            }
         }
     }
 }

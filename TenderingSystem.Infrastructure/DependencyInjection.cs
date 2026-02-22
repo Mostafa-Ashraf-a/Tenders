@@ -22,7 +22,14 @@ public static class DependencyInjection
         services.AddScoped<IBidRepository, BidRepository>();
         services.AddScoped<IAiSearchLogRepository, AiSearchLogRepository>();
 
-        services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>()
+        services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>(options =>
+        {
+            options.Password.RequireDigit = false;
+            options.Password.RequiredLength = 6;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireLowercase = false;
+        })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
