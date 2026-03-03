@@ -26,6 +26,7 @@
                 <MudSelectItem Value="@("UnderEvaluation")">تحت التقييم</MudSelectItem>
                 <MudSelectItem Value="@("Awarded")">مُرسى</MudSelectItem>
                 <MudSelectItem Value="@("Cancelled")">ملغاة</MudSelectItem>
+                <MudSelectItem Value="@("AiSuggested")">مقترح AI</MudSelectItem>
             </MudSelect>
         </MudItem>
         <MudItem xs="12" md="3" Class="d-flex align-center">
@@ -212,6 +213,7 @@ else
         "Awarded" => Color.Primary,
         "Cancelled" => Color.Error,
         "Archived" => Color.Dark,
+        "AiSuggested" => Color.Secondary,
         _ => Color.Default
     };
 
@@ -223,6 +225,7 @@ else
         "Awarded" => "مُرسى",
         "Cancelled" => "ملغاة",
         "Archived" => "مؤرشفة",
+        "AiSuggested" => "مقترح AI",
         _ => status
     };
 }

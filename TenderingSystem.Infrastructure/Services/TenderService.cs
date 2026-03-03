@@ -12,15 +12,18 @@ public class TenderService : ITenderService
     private readonly ITenderRepository _tenderRepository;
     private readonly ISupplierRepository _supplierRepository;
     private readonly IEmailService _emailService;
+    private readonly IBackgroundJobService _jobService;
 
     public TenderService(
         ITenderRepository tenderRepository,
         ISupplierRepository supplierRepository,
-        IEmailService emailService)
+        IEmailService emailService,
+        IBackgroundJobService jobService)
     {
         _tenderRepository = tenderRepository;
         _supplierRepository = supplierRepository;
         _emailService = emailService;
+        _jobService = jobService;
     }
 
     public async Task<IReadOnlyList<TenderDto>> GetAllTendersAsync()
@@ -97,6 +100,11 @@ public class TenderService : ITenderService
         tender.PublishDate = DateTime.UtcNow;
         
         await _tenderRepository.UpdateAsync(tender);
+
+        if (tender.HasAiTargeting)
+        {
+            _jobService.Enqueue<IAiProcessingService>(x => x.GenerateLeadsForTenderAsync(tender.Id));
+        }
 
         // Notify suppliers in the same category
         if (tender.CategoryId.HasValue)
