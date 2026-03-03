@@ -27,5 +27,6 @@ builder.Services.AddScoped<TenderService>();
 builder.Services.AddScoped<SupplierService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<BidService>();
+builder.Services.AddScoped<DashboardService>();
 
 await builder.Build().RunAsync();

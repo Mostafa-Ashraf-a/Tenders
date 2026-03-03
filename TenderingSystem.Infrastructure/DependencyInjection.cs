@@ -46,20 +46,6 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IBidService, BidService>();
-        services.AddScoped<IBackgroundJobService, HangfireJobService>();
-        services.AddScoped<IWebScraperService, PlaywrightScraperService>();
-        services.AddHttpClient<IGeminiService, GeminiAnalysisService>();
-        services.AddScoped<IAiProcessingService, AiProcessingService>();
-
-        // Add Hangfire services
-        services.AddHangfire(config => config
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
-
-        // Add the processing server as IHostedService
-        services.AddHangfireServer();
 
         return services;
     }
