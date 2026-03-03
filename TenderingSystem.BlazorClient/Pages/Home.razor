@@ -1,55 +1,118 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
+@using TenderingSystem.BlazorClient.Services
+@using TenderingSystem.Shared.Models.Dashboard
 @inject NavigationManager NavigationManager
+@inject DashboardService DashboardService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
 
-<PageTitle>نظام إدارة المناقصات الذكي</PageTitle>
+<PageTitle>نظام إدارة المناقصات الذكي - لوحة القيادة</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
-    <MudText Typo="Typo.h3" Align="Align.Center" Color="Color.Primary" Class="mb-4">مرحباً بك في نظام إدارة المناقصات الذكي</MudText>
-    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-12">المنصة الأسرع للعثور على المناقصات وإدارتها باستخدام الذكاء الاصطناعي</MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-16">
+    <MudText Typo="Typo.h3" Align="Align.Center" Color="Color.Primary" Class="mb-4">نظام المناقصات الذكي</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-12">المنصة الأسرع للعثور على المناقصات وإدارتها بالذكاء الاصطناعي</MudText>
 
     <AuthorizeView>
         <Authorized>
-            <MudGrid>
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="3" Class="pa-4">
-                        <MudCardHeader>
-                            <CardHeaderAvatar>
-                                <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
-                            </CardHeaderAvatar>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">المناقصات الحالية</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudText>تصفح المناقصات المتاحة والمفتوحة للمشاركة.</MudText>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/tenders">عرض المناقصات</MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+            }
+            else if (_stats != null)
+            {
+                <MudGrid>
+                    <!-- Statistics Cards -->
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="3" Class="pa-6 text-center" Style="border-top: 4px solid var(--mud-palette-primary)">
+                            <MudIcon Icon="@Icons.Material.Filled.ListAlt" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                            <MudText Typo="Typo.h4" Color="Color.Primary">@_stats.TotalTenders</MudText>
+                            <MudText Typo="Typo.subtitle1">إجمالي المناقصات</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="3" Class="pa-6 text-center" Style="border-top: 4px solid var(--mud-palette-success)">
+                            <MudIcon Icon="@Icons.Material.Filled.Business" Color="Color.Success" Size="Size.Large" Class="mb-2" />
+                            <MudText Typo="Typo.h4" Color="Color.Success">@_stats.TotalSuppliers</MudText>
+                            <MudText Typo="Typo.subtitle1">الموردون المسجلون</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="3" Class="pa-6 text-center" Style="border-top: 4px solid var(--mud-palette-secondary)">
+                            <MudIcon Icon="@Icons.Material.Filled.SmartToy" Color="Color.Secondary" Size="Size.Large" Class="mb-2" />
+                            <MudText Typo="Typo.h4" Color="Color.Secondary">@_stats.TotalAiGeneratedSuppliers</MudText>
+                            <MudText Typo="Typo.subtitle1">موردون مقترحون بالـ AI</MudText>
+                        </MudPaper>
+                    </MudItem>
 
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="3" Class="pa-4">
-                        <MudCardHeader>
-                            <CardHeaderAvatar>
-                                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Secondary" Size="Size.Large" />
-                            </CardHeaderAvatar>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">البحث الذكي</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudText>اعتمد على الذكاء الاصطناعي لإيجاد الموردين الأكفأ.</MudText>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/ai-search-logs">إدارة البحث الذكي</MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+                    <!-- Latest Tenders Table -->
+                    <MudItem xs="12" md="6" Class="mt-4">
+                        <MudPaper Elevation="3" Class="pa-4 h-100">
+                            <div class="d-flex align-center justify-space-between mb-4">
+                                <MudText Typo="Typo.h6" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Class="mr-2" /> أحدث المناقصات المطروحة
+                                </MudText>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/tenders">عرض الكل</MudButton>
+                            </div>
+                            
+                            @if (_stats.RecentTenders.Any())
+                            {
+                                <MudTable Items="@_stats.RecentTenders" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>العنوان</MudTh>
+                                        <MudTh>الفئة</MudTh>
+                                        <MudTh>تاريخ الإغلاق</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate Context="tender">
+                                        <MudTd DataLabel="العنوان">
+                                            <a href="/tenders/@tender.Id" class="mud-primary-text" style="text-decoration:none; font-weight:bold;">@tender.Title</a>
+                                        </MudTd>
+                                        <MudTd DataLabel="الفئة">@tender.CategoryName</MudTd>
+                                        <MudTd DataLabel="تاريخ الإغلاق">@tender.ClosingDate.ToString("yyyy-MM-dd")</MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info">لا توجد مناقصات حديثة.</MudAlert>
+                            }
+                        </MudPaper>
+                    </MudItem>
 
-            </MudGrid>
+                    <!-- Top Active Suppliers Table -->
+                    <MudItem xs="12" md="6" Class="mt-4">
+                        <MudPaper Elevation="3" Class="pa-4 h-100">
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-4">
+                                <MudIcon Icon="@Icons.Material.Filled.LocalActivity" Class="mr-2" /> الموردون الأكثر نشاطاً
+                            </MudText>
+                            
+                            @if (_stats.TopActiveSuppliers.Any())
+                            {
+                                <MudTable Items="@_stats.TopActiveSuppliers" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>اسم الشركة</MudTh>
+                                        <MudTh>عدد العروض المقدمة</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate Context="supplier">
+                                        <MudTd DataLabel="اسم الشركة">@supplier.CompanyName</MudTd>
+                                        <MudTd DataLabel="عدد العروض">
+                                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@supplier.BidsCount عرض</MudChip>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info">لم يقم أي مورد بتقديم عروض حتى الآن.</MudAlert>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error">حدث خطأ أثناء تحميل لوحة البيانات.</MudAlert>
+            }
         </Authorized>
         <NotAuthorized>
             <MudGrid Justify="Justify.Center">
@@ -67,3 +130,25 @@
         </NotAuthorized>
     </AuthorizeView>
 </MudContainer>
+
+@code {
+    private DashboardStatsDto? _stats;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            _stats = await DashboardService.GetDashboardStatsAsync();
+            if (_stats == null)
+            {
+                Snackbar.Add("فشل في تحميل إحصائيات لوحة التحكم", Severity.Error);
+            }
+        }
+        
+        _loading = false;
+    }
+}

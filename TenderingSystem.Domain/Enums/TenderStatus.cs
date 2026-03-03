@@ -7,5 +7,6 @@ public enum TenderStatus
     UnderEvaluation,
     Awarded,
     Cancelled,
-    Archived
+    Archived,
+    AiSuggested
 }

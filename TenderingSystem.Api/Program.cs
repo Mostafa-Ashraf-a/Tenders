@@ -7,6 +7,8 @@ using TenderingSystem.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using TenderingSystem.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using TenderingSystem.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,6 +101,13 @@ app.UseCors("AllowBlazorClient");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    // Important: In a real production app, use proper Authorization (e.g. check for Admin role)
+    // For local development or this setup, allowing all or applying a simple filter
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
 
 app.MapControllers();
 
